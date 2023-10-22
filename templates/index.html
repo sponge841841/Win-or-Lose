@@ -7,13 +7,24 @@
     <link rel="stylesheet" href="https://mui.com/latest/css/mui.min.css">
 </head>
 <body>
-    <h1>Welcome</h1>
-    <!-- Googleのサインインボタン（仮） -->
-    <button class="mui-btn mui-btn--primary">Googleでサインイン</button>
-    <!-- Googleのサインアップボタン（仮） -->
-    <button class="mui-btn mui-btn--danger">Googleでサインアップ</button>
+    <h1>Login and Register</h1>
 
-    <!-- MUIのJSを読み込む -->
-    <script src="https://mui.com/latest/js/mui.min.js"></script>
+    <form method="post">
+        <label for="username">Username:</label>
+        <input type="username" name="username" required>
+        <br>
+
+        <label for="email">Email:</label>
+        <input type="email" name="email" required>
+        <br>
+
+        <label for="password">Password:</label>
+        <input type="password" name="password" required>
+        <br>
+
+        <button type="submit" name="action" value="login">Login</button>
+        <button type="submit" name="action" value="register">Register</button>
+    </form>
+
 </body>
 </html>
