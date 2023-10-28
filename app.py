@@ -1,30 +1,39 @@
+from dotenv import load_dotenv
 from flask import Flask, request, render_template, redirect, url_for
 from flask_login import LoginManager, login_user, login_required, logout_user
-from flask_sqlalchemy import SQLAlchemy
-from dotenv import load_dotenv
+import mysql.connector
 import os
+from user_model import User
 
-load_dotenv()
-
-# FlaskとFlask拡張の初期化
+# FlaskとFlask-Loginの初期化
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://' + os.environ['DB_USERNAME'] + ':' + os.environ['DB_PASSWORD'] + '@' + os.environ['DB_SERVER'] + '/' + os.environ['DB_NAME'] + '?charset=utf8' # MySqlの設定
-app.secret_key = os.environ['SECRET_KEY']  # Flask-Loginに必要な秘密鍵
-db = SQLAlchemy(app)
+app.secret_key = os.environ['SECRET_KEY']
 login_manager = LoginManager()
 login_manager.init_app(app)
+load_dotenv()
 
-# ユーザーモデルの定義
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    username = db.Column(db.String(255), nullable=False)
-    email = db.Column(db.String(255), unique=True, nullable=False)
-    password_hash = db.Column(db.String(255), nullable=False)
+# MySQL接続設定
+config = {
+    'user': os.environ['DB_USERNAME'],
+    'password': os.environ['DB_PASSWORD'],
+    'host': os.environ['DB_SERVER'],
+    'database': os.environ['DB_NAME'],
+    'charset': 'utf8'
+}
 
 # ユーザーローダーの定義
-@login_manager.user_loader
+@LoginManager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    cnx = mysql.connector.connect(**config)
+    cursor = cnx.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+    row = cursor.fetchone()
+    cursor.close()
+    cnx.close()
+    if row:
+        return User(row['id'], row['username'], row['email'], row['password_hash'])
+    else:
+        return None
 
 # ルーティングとビュー関数
 @app.route('/', methods=['GET', 'POST'])
@@ -35,17 +44,25 @@ def index():
         password = request.form['password']
         action = request.form['action']
 
+        cnx = mysql.connector.connect(**config)
+        cursor = cnx.cursor(dictionary=True)
+
         if action == 'register':
             # 新規登録処理
-            new_user = User(username=username, email=email, password_hash=password)
-            db.session.add(new_user)
-            db.session.commit()
-            login_user(new_user)
+            cursor.execute("INSERT INTO users (username, email, password_hash) VALUES (%s, %s, %s)", (username, email, password))
+            cnx.commit()
+            new_user_id = cursor.lastrowid
+            login_user(User(new_user_id, username, email, password))
+
         elif action == 'login':
             # ログイン処理
-            user = User.query.filter_by(username=username, email=email, password_hash=password).first()
-            if user:
-                login_user(user)
+            cursor.execute("SELECT * FROM users WHERE username = %s AND email = %s AND password_hash = %s", (username, email, password))
+            row = cursor.fetchone()
+            if row:
+                login_user(User(row['id'], row['username'], row['email'], row['password_hash']))
+
+        cursor.close()
+        cnx.close()
         
         return redirect(url_for('protected'))
         
@@ -62,6 +79,6 @@ def logout():
     logout_user()
     return redirect(url_for('index'))
 
-# データベースの初期化とアプリの実行
+# アプリの実行
 if __name__ == '__main__':
     app.run(debug=True)
