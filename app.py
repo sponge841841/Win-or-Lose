@@ -6,11 +6,12 @@ import os
 from user_model import User
 
 # FlaskとFlask-Loginの初期化
+load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.environ['SECRET_KEY']
 login_manager = LoginManager()
 login_manager.init_app(app)
-load_dotenv()
+
 
 # MySQL接続設定
 config = {
@@ -22,7 +23,7 @@ config = {
 }
 
 # ユーザーローダーの定義
-@LoginManager.user_loader
+@login_manager.user_loader
 def load_user(user_id):
     cnx = mysql.connector.connect(**config)
     cursor = cnx.cursor(dictionary=True)
