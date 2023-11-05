@@ -117,7 +117,38 @@ def home():
     # テンプレートにデータを渡す
     return render_template('home.html', team_name=team_name, dates_info=dates_info)
 
-
+@app.route('/createscore', methods=['GET', 'POST'])
+@login_required
+def createscore():
+    if request.method == 'POST':
+        date = request.form['date']
+        comment = request.form['comment']
+        player_name = request.form['player_name']
+        score = request.form['score']
+        team_id = current_user.get_id()  # 現在のユーザー（チーム）IDを取得
+        
+        # データベースに接続
+        cnx = mysql.connector.connect(**config)
+        cursor = cnx.cursor()
+        
+        # team_dates テーブルに新しいエントリを作成
+        cursor.execute("INSERT INTO team_dates (team_id, date, comment) VALUES (%s, %s, %s)", 
+                       (team_id, date, comment))
+        team_date_id = cursor.lastrowid  # 新しく作成されたエントリのIDを取得
+        
+        # scores テーブルに新しいスコアを記入
+        cursor.execute("INSERT INTO scores (team_date_id, player_name, score) VALUES (%s, %s, %s)",
+                       (team_date_id, player_name, score))
+        
+        # コミットしてデータベース接続を閉じる
+        cnx.commit()
+        cursor.close()
+        cnx.close()
+        
+        return redirect(url_for('home'))
+    else:
+        # GETリクエストの場合はフォームページを表示
+        return render_template('createscore.html')
 
 @app.route('/logout')
 @login_required

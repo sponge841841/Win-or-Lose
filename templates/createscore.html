@@ -1,0 +1,31 @@
+<!-- createscore.html -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>スコア作成</title>
+</head>
+<body>
+    <h1>スコアを記入する</h1>
+    
+    <form method="post" action="{{ url_for('createscore') }}">
+        <label for="date">日付:</label>
+        <input type="date" name="date" required>
+        <br>
+        
+        <label for="comment">詳細:</label>
+        <input type="text" name="comment" required>
+        <br>
+        
+        <label for="player_name">名前:</label>
+        <input type="text" name="player_name" required>
+        <label for="score">点数:</label>
+        <input type="number" name="score" required>
+        <br>
+        
+        <button type="submit">記入</button>
+    </form>
+    
+    <a href="{{ url_for('home') }}">ホームに戻る</a>
+</body>
+</html>
