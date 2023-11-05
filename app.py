@@ -1,9 +1,11 @@
 from dotenv import load_dotenv
-from flask import Flask, request, render_template, redirect, url_for
-from flask_login import LoginManager, login_user, login_required, logout_user
+from flask import Flask, request, render_template, redirect, url_for, session
+from flask_login import LoginManager, login_required, logout_user
 import mysql.connector
 import os
-from user_model import User
+from werkzeug.security import generate_password_hash, check_password_hash
+
+from team_model import Team
 
 # FlaskとFlask-Loginの初期化
 load_dotenv()
@@ -11,7 +13,6 @@ app = Flask(__name__)
 app.secret_key = os.environ['SECRET_KEY']
 login_manager = LoginManager()
 login_manager.init_app(app)
-
 
 # MySQL接続設定
 config = {
@@ -22,17 +23,18 @@ config = {
     'charset': 'utf8'
 }
 
-# ユーザーローダーの定義
+# ユーザーローダーの定義（チームに変更）
 @login_manager.user_loader
-def load_user(user_id):
+def load_user(team_id):
     cnx = mysql.connector.connect(**config)
     cursor = cnx.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+    cursor.execute("SELECT * FROM teams WHERE id = %s", (team_id,))
     row = cursor.fetchone()
     cursor.close()
     cnx.close()
     if row:
-        return User(row['id'], row['username'], row['email'], row['password_hash'])
+        # UserクラスはTeamクラスに変更する必要があります。
+        return Team(row['id'], row['team_name'], row['password_hash'])
     else:
         return None
 
@@ -40,8 +42,7 @@ def load_user(user_id):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        username = request.form['username']
-        email = request.form['email']
+        team_name = request.form['team_name']
         password = request.form['password']
         action = request.form['action']
 
@@ -49,18 +50,20 @@ def index():
         cursor = cnx.cursor(dictionary=True)
 
         if action == 'register':
-            # 新規登録処理
-            cursor.execute("INSERT INTO users (username, email, password_hash) VALUES (%s, %s, %s)", (username, email, password))
+            # チーム登録処理
+            password_hash = generate_password_hash(password)
+            cursor.execute("INSERT INTO teams (team_name, password_hash, description) VALUES (%s, %s, %s)", 
+                           (team_name, password_hash, 'チームの説明'))
             cnx.commit()
-            new_user_id = cursor.lastrowid
-            login_user(User(new_user_id, username, email, password))
+            # ここでチームのセッションを作成します
+            session['team_id'] = cursor.lastrowid
 
         elif action == 'login':
-            # ログイン処理
-            cursor.execute("SELECT * FROM users WHERE username = %s AND email = %s AND password_hash = %s", (username, email, password))
+            # チームログイン処理
+            cursor.execute("SELECT * FROM teams WHERE team_name = %s", (team_name,))
             row = cursor.fetchone()
-            if row:
-                login_user(User(row['id'], row['username'], row['email'], row['password_hash']))
+            if row and check_password_hash(row['password_hash'], password):
+                session['team_id'] = row['id']
 
         cursor.close()
         cnx.close()
