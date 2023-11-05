@@ -1,9 +1,33 @@
-<!-- createscore.html -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <title>スコア作成</title>
+    <script>
+        // プレイヤーのスコア入力フィールドを追加する関数
+        function addScoreField() {
+            // 新しい入力フィールドのHTMLを生成
+            var newField = `
+                <div class="player-score-group">
+                    <label for="player_name[]">名前:</label>
+                    <input type="text" name="player_name[]" required>
+                    <label for="score[]">点数:</label>
+                    <input type="number" name="score[]" required>
+                    <button type="button" onclick="removeScoreField(this)">削除</button>
+                    <br>
+                </div>
+            `;
+
+            // 入力フィールドをフォームに追加
+            document.getElementById('score-fields').insertAdjacentHTML('beforeend', newField);
+        }
+
+        // 指定されたフィールドを削除する関数
+        function removeScoreField(button) {
+            // ボタンの親要素（.player-score-group）を削除
+            button.parentElement.remove();
+        }
+    </script>
 </head>
 <body>
     <h1>スコアを記入する</h1>
@@ -17,15 +41,21 @@
         <input type="text" name="comment" required>
         <br>
         
-        <label for="player_name">名前:</label>
-        <input type="text" name="player_name" required>
-        <label for="score">点数:</label>
-        <input type="number" name="score" required>
+        <div id="score-fields">
+            <!-- プレイヤーのスコア入力フィールドはここに追加されます -->
+        </div>
+        
+        <button type="button" onclick="addScoreField()">プレイヤーと点数を追加</button>
         <br>
         
         <button type="submit">記入</button>
     </form>
     
     <a href="{{ url_for('home') }}">ホームに戻る</a>
+    
+    <script>
+        // ページが読み込まれたときに最初のスコア入力フィールドを追加
+        addScoreField();
+    </script>
 </body>
 </html>
