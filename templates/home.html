@@ -1,0 +1,23 @@
+<!-- home.html -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Home Page</title>
+</head>
+<body>
+    <h1>{{ team_name }}のホームページ</h1>
+    
+    {% for date, info in dates_info.items() %}
+        <h2>{{ date }}</h2>
+        <p>{{ info.comment }}</p>
+        <ul>
+            {% for member in info.members %}
+                <li>{{ member.name }}: {{ member.score }}点</li>
+            {% endfor %}
+        </ul>
+    {% endfor %}
+    <a href="{{ url_for('createscore') }}">スコアを記入する</a>
+    <a href="{{ url_for('logout') }}">ログアウト</a>
+</body>
+</html>

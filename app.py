@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 from flask import Flask, request, render_template, redirect, url_for, session
-from flask_login import LoginManager, login_required, logout_user
+from flask_login import LoginManager, current_user, login_required, login_user, logout_user
 import mysql.connector
 import os
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -56,26 +56,68 @@ def index():
                            (team_name, password_hash, 'チームの説明'))
             cnx.commit()
             # ここでチームのセッションを作成します
-            session['team_id'] = cursor.lastrowid
+            team = Team(cursor.lastrowid, team_name, password_hash)
+            login_user(team) # チームをログインさせる
 
         elif action == 'login':
             # チームログイン処理
             cursor.execute("SELECT * FROM teams WHERE team_name = %s", (team_name,))
             row = cursor.fetchone()
             if row and check_password_hash(row['password_hash'], password):
-                session['team_id'] = row['id']
+                team = Team(row['id'], team_name, row['password_hash'])
+                login_user(team) # チームをログインさせる
 
         cursor.close()
         cnx.close()
         
-        return redirect(url_for('protected'))
+        return redirect(url_for('home'))
         
     return render_template('index.html')
 
-@app.route('/protected')
+@app.route('/home')
 @login_required
-def protected():
-    return "This is a protected page."
+def home():
+    # ログインしているチームのIDを取得
+    team_id = current_user.get_id()
+    
+    # データベースに接続
+    cnx = mysql.connector.connect(**config)
+    cursor = cnx.cursor(dictionary=True)
+    
+    # team_dates と scores から情報を取得
+    cursor.execute("""
+        SELECT td.date, td.comment, s.player_name, s.score
+        FROM team_dates AS td
+        JOIN scores AS s ON td.id = s.team_date_id
+        WHERE td.team_id = %s
+        ORDER BY td.date DESC, s.score DESC
+    """, (team_id,))
+    
+    # 結果を整形
+    dates_info = {}
+    for row in cursor.fetchall():
+        date = row['date'].strftime('%Y-%m-%d')
+        if date not in dates_info:
+            dates_info[date] = {
+                'comment': row['comment'],
+                'members': []
+            }
+        dates_info[date]['members'].append({
+            'name': row['player_name'],
+            'score': row['score']
+        })
+    
+    # データベース接続を閉じる
+    cursor.close()
+    cnx.close()
+    
+    # チーム名を取得
+    team_name = current_user.team_name
+    
+    # テンプレートにデータを渡す
+    return render_template('home.html', team_name=team_name, dates_info=dates_info)
+
+
 
 @app.route('/logout')
 @login_required
